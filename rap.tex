@@ -12,6 +12,7 @@
 \usepackage{color}
 \usepackage{gauss}
 \usepackage{bbm}
+\usepackage{xspace}
 \usepackage{float}
 \usepackage{csquotes}
 \newcommand{\N}{\ensuremath{\mathbbm{N}}}
@@ -21,6 +22,7 @@
 \newcommand{\C}{\ensuremath{\mathbbm{C}}}
 \newcommand{\rd}{\ensuremath{\mathrm{d}}}
 \newcommand{\id}{\ensuremath{\,\rd}}
+\newcommand{\gsl}{\textsc{Gsl}\xspace}
 \newcommand{\ordo}[1]{{\cal O}\left( #1 \right)}
 % Want flexible vectors!
 \newcommand{\myvec}[1]{\ensuremath{\mathbf{#1}}}
@@ -34,19 +36,86 @@
 \setlength{\belowcaptionskip}{\baselineskip}
 \newcolumntype{d}[0]{D{.}{.}{-1} }
 
+% Special front page for Numerical Methods in Physics...
+\usepackage{umuphys}            % Local umu-physics firstpage style
+\author{Torbjørn Ludvigsen}
+\title{Fast Fourier transforms}
+\course{Numerical Methods in Physics}
+\email{tolu0022@student.umu.se}
+%\bottomtext{Extracting Information from a Noisy Signal}
 
 \begin{document}
+\maketitle
+%\includepdf[pages={1}]{framsida.pdf}
 
-\title{Modeling and Simulation, Lab 4}
-\author{Torbjørn Ludvigsen}
-\includepdf[pages={1}]{framsida.pdf}
+\begin{abstract}
+\end{abstract}
 
-\newpage
+\vspace{2cm}
 \tableofcontents
-\newpage
+\clearpage
 
 \section{Introduction}
+This lab is about extracting information from a noisy signal.
+One can think of the signal as something that one would get from
+recording an amplitude modulated (AM) radio-signal that carried binary information.
+We say that the noisy signal consist of two parts, pure signal and noise.
+This makes sense in all cases where a signal is represented by some measurable
+physical entity The $2^{nd}$ law of thermodynamics tells us that the
+probability of increased entropy (could be interpreted as disorder or ``noise'') is very high.
 
+The pure signal has only one frequency, we call that the information-carrying
+frequency $\nu_0$. Since the information is binary, the pure signal
+takes on one of two different amplitudes, call them $a_{high}$ and $a_{low}$.
+One period with high amplitude in the pure signal encodes a 1, one period with
+low amplitude encodes a 0.
+
+The signal is given as a discrete column vector and is generated uniquely for each student.
+The column vector itself is given in as lines in an ASCII-encoded file.
+In the next section, we present the theory behind how FFT-techniques can be used to decode such a noisy signal.
+Then, in \ref{sec:code}, we present the tools we are going to use to implement the theory as
+procedures expressed as a computer program that can be compiled and executed.
+Figures and tables discussing <insert issues mentioned in spec here> is
+included in \ref{sec:results}.
+
+
+\section{Theory}\label{sec:code}
+% give equations that program solves
+
+\section{Code}
+% describe software, abstract point of view
+% describe external functions used
+
+\subsection{Numerical methods}
+% give short overview of Cooley-Turk FFT algorithm here
+% link equations in Theory to the written code
+
+\subsection{Program}
+% how to compile and use program
+
+\section{Results}\label{sec:results}
+% figures, tables, explanatory text
+% answer questions posed in introduction
+% make sure all issues mentioned in spec are discussed
+
+\section{Conclusions}
+% validity of results?
+% possible implications?
+% possible improvements?
+
+
+\clearpage
+\begin{thebibliography}{99}
+
+%\bibitem{sampl}
+%  W. H. Press, S. A. Teukolsky, W. T. Vetterling, and
+%  B. P. Flannery, \emph{Numerical Recipes in C}, 2nd ed. (Cambridge
+%  University Press, Cambridge, 1992).
+
+\end{thebibliography}
+
+\appendix
+\section{Appendices}
 
 \end{document}
 
