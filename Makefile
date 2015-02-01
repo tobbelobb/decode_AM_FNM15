@@ -31,6 +31,8 @@ lab1: lab1.c
 warmup0: warmup0.c
 	$(CC) -D_POSIX_C_SOURCE=2 $(CFLAGS) $< -o warmup0 $(LOADLIBES)
 
+warmup1: warmup1.c
+	$(CC) -D_POSIX_C_SOURCE=2 $(CFLAGS) $< -o warmup1 $(LOADLIBES)
 
 .PHONY: clean veryclear show
 

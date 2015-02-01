@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <math.h>
 #include <gsl/gsl_errno.h> 
 #include <gsl/gsl_fft_complex.h>
@@ -26,12 +25,11 @@
 
 #define SQRT_PI 1.77245385090552
 #define PI 3.14159265358979323846264338327950
-#define MAX_CHARS_PER_LINE 100
 
 struct fft_collection {
-  gsl_complex_packed_array data; // Always allocate for log2_ceil(2*N) doubles
+  gsl_complex_packed_array data;
   unsigned char flag;   // Are we in freq domain and are data shifted?
-  int N;                // actual found elements in data file. GSL want log2_ceil of this
+  int N;                 // nr of elements in data
   pthread_mutex_t lock; // Always locked when data is read/changed
 };
 
@@ -98,7 +96,7 @@ void square_coll(struct fft_collection* coll){
  * 7 decimal points is precision of input data
  * Create decimation-in-frequency wrapper of this that re-sorts data if
  * needed...
- * Scale like data/sqrt(N) if in freq domain and data should fit
+ * Scale like data/sqrt(N_samples) if in freq domain and data should fit
  * in same plot as time-domain data.
  * If coll->flag is set then data should always be shifted,
  * this could have been done in fprint_coll, but then printing
@@ -137,6 +135,16 @@ void print_coll(struct fft_collection* coll){
 }
 
 
+/* will create or supersede file. */
+void save_coll(char* filename, struct fft_collection* coll){
+  FILE* f;
+  if((f = fopen(filename, "w")) == NULL) err_sys("fopen in save_data error");
+  fprint_coll(f,coll);
+  fclose(f);
+  printf("INFO: saved data in file %s\n",filename);
+  fflush(stdout);
+}
+
 void copy_coll_data(struct fft_collection* source, struct fft_collection* dest){
   int i;
   if(source->N == dest->N){
@@ -154,19 +162,10 @@ void copy_coll_data(struct fft_collection* source, struct fft_collection* dest){
   printf("INFO: Copied data\n");
 }
 
-/* will create or supersede file. */
-void save_coll(struct fft_collection* coll, const char* filename){
-  FILE* f;
-  if((f = fopen(filename, "w")) == NULL) err_sys("fopen in save_coll error");
-  fprint_coll(f,coll);
-  fclose(f);
-  printf("INFO: saved data in file %s\n",filename);
-  fflush(stdout);
-}
 
-/* Won't store data in a file unless non NULL filename is given
- * */
-void plot_coll(struct fft_collection* coll, const char* filename){
+/* Won't store data in a file, stores data in RAM and
+ * streams the copy directly to gnuplot */
+void plot_coll(struct fft_collection* coll){
   FILE * gnuplot_pipe;
   int i, gnuplot_lines = 2;
   char * commandsForGnuplot[] = {"set notitle\n",
@@ -187,21 +186,18 @@ void plot_coll(struct fft_collection* coll, const char* filename){
   }
   // once for real values (gnuplot won't store streamed data)
   fprint_coll(gnuplot_pipe, &coll_copy);
-  fprintf(gnuplot_pipe, "e\n");
-  fflush(gnuplot_pipe);
+  fprintf(gnuplot_pipe, "e");
   // And once for complex values (since gnuplot won't store streamed data)
   fprint_coll(gnuplot_pipe, &coll_copy);
-  fprintf(gnuplot_pipe, "e\n");
+  fprintf(gnuplot_pipe, "e");
   fflush(gnuplot_pipe);
   fclose(gnuplot_pipe);
-  // lastly, if we wanted to save, save the copy
-  if(filename != NULL) save_coll(&coll_copy, filename);
   free(coll_copy.data);
 }
 
 void fft(struct fft_collection* coll){
   pthread_mutex_lock(&(coll->lock));
-  if(gsl_fft_complex_radix2_forward(coll->data,1,log2_ceil(coll->N)) != GSL_SUCCESS)
+  if(gsl_fft_complex_radix2_forward(coll->data,1,coll->N) != GSL_SUCCESS)
     err_sys("gsl_fft_complex_radix2_forward error");
   coll->flag = ~(coll->flag); // FFT will both change domain and shift data
   pthread_mutex_unlock(&(coll->lock));
@@ -211,7 +207,7 @@ void fft(struct fft_collection* coll){
 
 void ifft(struct fft_collection* coll){
   pthread_mutex_lock(&(coll->lock));
-  if(gsl_fft_complex_radix2_inverse(coll->data,1,log2_ceil(coll->N)) != GSL_SUCCESS)
+  if(gsl_fft_complex_radix2_inverse(coll->data,1,coll->N) != GSL_SUCCESS)
     err_sys("gsl_fft_complex_radix2_inverse error");
   coll->flag = ~(coll->flag); // FFT will both change domain and shift data
   pthread_mutex_unlock(&(coll->lock));
@@ -219,64 +215,35 @@ void ifft(struct fft_collection* coll){
   fflush(stdout);
 }
 
-int count_samples(char *filename){
-  FILE *f;
-  int N_samples;
-  char buf[MAX_CHARS_PER_LINE];
-  double dummy;
-  if ((f = fopen(filename, "r")) == NULL)
-    err_sys("fopen in count samples error");
-  N_samples = 0;
-  while(fgets(buf, MAX_CHARS_PER_LINE, f) != NULL &&
-        sscanf(buf,"%lf",&dummy)>0 &&
-        buf[0] != '\n')
-    N_samples++;
-  fclose(f);
-  return N_samples;
-}
-
 int main(int argc, char *argv[]){
-  FILE *f;
-  struct fft_collection coll = {NULL, 0x00, 0, PTHREAD_MUTEX_INITIALIZER}; 
-  int i;
+  int p, s, periods = 16, samples_per_period = 128;
+  int N = periods*samples_per_period; // = 1024
+  double dt = 1.0/(double)N, fc = 1.0/(128.0*dt), twopi = 2*PI, twopifc = twopi*fc;
+  double u0 = 1.0, u1 = 3.0, u;
+  //unsigned char pattern0 = 0x55;   // 0b01010101 WARNING: binary is GNU extension...
+  unsigned int  pattern1 = 0x5555; // 0b0101010101010101 WARNING: binary is GNU extension...
 
-  if(argc != 3){
-    printf("Usage: %s filename [p][s]|letter\n", argv[0]);
-    return 1;
+  // collections                 data                        flag  N  lock
+  struct fft_collection coll0 = {calloc(N*2,sizeof(double)), 0x00, N, PTHREAD_MUTEX_INITIALIZER};
+  struct fft_collection coll1 = {calloc(N*2,sizeof(double)), 0x00, N, PTHREAD_MUTEX_INITIALIZER};
+
+  pthread_mutex_lock(&(coll0.lock));
+  for(p=0;p<periods;p++){
+    if((1 << p) & pattern1) u = u1; else u = u0;
+    for(s=0;s<samples_per_period;s++){
+      REAL(coll0.data,s+p*samples_per_period) = u*sin(twopifc*(p*samples_per_period+s)*dt); // calloc handles the IMAG zeros...
+    }
   }
+  pthread_mutex_unlock(&(coll1.lock));
+  
+  copy_coll_data(&coll0,&coll1);
+  fft(&coll1);
+  scale_coll(&coll1, 1/sqrt(N));
+  square_coll(&coll1);
+  plot_coll(&coll0);
+  plot_coll(&coll1);
 
-  // See if file is any good...
-  if((coll.N = count_samples(argv[1])) <= 1){
-    printf("Found only %d data points in %s\n", coll.N, argv[1]);
-    return 1;
-  }
-  printf("INFO: %s found %d data points in %s\n", argv[0], coll.N, argv[1]);
-  fflush(stdout);
-
-  // Ok, initialize rest of fft_collection struct
-  if((coll.data = calloc(log2_ceil(coll.N<<1),sizeof(double))) == NULL)
-    err_sys("calloc error");
-
-  // Read data from file. Allcate memory for real and imaginary parts
-  if ((f = fopen(argv[1], "r")) == NULL) err_sys("fopen error");
-  for(i=0;i<coll.N;i++){ // IMAG(data,i) = 0.0; set by calloc
-    fscanf(f,"%lf",&(REAL(coll.data,i)));
-  }
-
-  // Manipulate data
-  fft(&coll);
-  //ifft(&coll);
-
-  // What to do with manipulated data
-  if((argv[2][0] == 's' && argv[2][1] == 'p') ||
-     (argv[2][0] == 'p' && argv[2][1] == 's')) // plot and save 
-    plot_coll(&coll,"plotted_and_saved.data");
-  else if(argv[2][0] == 's') // save
-    save_coll(&coll, "saved.data");
-  else // plot
-    plot_coll(&coll, NULL);
-
-  fclose(f);
-  free(coll.data);
+  free(coll0.data);
+  free(coll1.data);
   return 0;
 }
