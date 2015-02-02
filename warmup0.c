@@ -169,22 +169,26 @@ int main(int argc, char *argv[]){
   // GSL puts t = 0 at element 0.
   // For something to be periodic we need to set values from
   // right and left simultanously
-  for(i=0;i<N/2;i++){
-    REAL(data,i) = sipisig*exp(-i*i*dtdt/sigmasigma);
-    REAL(data,N-1-i) = sipisig*exp(-(i+1)*(i+1)*dtdt/sigmasigma);
+  REAL(data,0) = sipisig; // = sipisig, since exp(0) = 1
+  for(i=1;i<N/2;i++){
+    REAL(data,i)   = sipisig*exp(-i*i*dtdt/sigmasigma);
+    REAL(data,N-i) = REAL(data,i);
   }
+  REAL(data,N/2) = sipisig*exp(-(N*N)/4 *dtdt/sigmasigma);
 
   // Initializing compar
   for(i=0;i<N;i++){
     REAL(compar,i) = exp(-pisigmapisigma*(i-N/2)*(i-N/2));
   }
 
-  save_data("before_fft.data",data,N,flag);
+  //save_data("before_fft.data",data,N,flag);
   fft(&data,N,&flag);
-  save_data("after_fft.data",data,N,flag);
 
-  //shift_data(&data,N);
-  //scale_data(&data,N,1.0/(double)N);
+  shift_data(&data,N);
+  scale_data(&data,N,1.0/(double)N);
+  save_data("data.data",data,N,flag);
+  save_data("compar.data",compar,N,flag);
+
   //plot_2_curves(data,compar,N,1);
   free(data);
   return 0;

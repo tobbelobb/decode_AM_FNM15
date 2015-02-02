@@ -28,6 +28,9 @@ rap: rap.tex $(PLOTINCLUDES)
 lab1: lab1.c
 	$(CC) -D_POSIX_C_SOURCE=2 $(CFLAGS) $< -o lab1 $(LOADLIBES)
 
+decode: decode.c
+	$(CC) $(CFLAGS) $< -o decode $(LOADLIBES)
+
 warmup0: warmup0.c
 	$(CC) -D_POSIX_C_SOURCE=2 $(CFLAGS) $< -o warmup0 $(LOADLIBES)
 
