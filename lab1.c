@@ -393,8 +393,8 @@ int main(int argc, char *argv[]){
 
   // Manipulate data
   fft(&coll);
-  gaussian_filter(&coll, bandwidth, 0);
-  ifft(&coll);
+  gaussian_filter(&coll, bandwidth, 2);
+  //ifft(&coll);
 
   // What to do with manipulated data
   if((argv[3][0] == 's' && argv[3][1] == 'p') ||

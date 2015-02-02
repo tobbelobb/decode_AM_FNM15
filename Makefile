@@ -12,7 +12,7 @@ LOADLIBES = -lgsl -lgslcblas -lm
 
 LC = pdflatex
 FLAGS = -shell-escape
-PLOTS = 
+PLOTS = filtered_with_bandwidth_256 different_filters different_bandwidths
 PLOTINCLUDES = $(PLOTS:=.tex)
 GNUPLOTSCRIPTS = $(PLOTS:=.gp)
 EPSS = $(PLOTS:=.eps)

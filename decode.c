@@ -11,9 +11,7 @@
 
 struct fft_collection {
   gsl_complex_packed_array data; // Always allocate for log2_ceil(2*N) doubles
-  unsigned char flag;   // Are we in freq domain and is data shifted?
   int N;                // actual found elements in data file. GSL want log2_ceil of this
-  pthread_mutex_t lock; // Wrap for-loops over data elements in lock/unlock
 };
 
 void err_sys(const char* x) { 
@@ -31,19 +29,13 @@ int log2_ceil(int a){
 }
 
 void fft(struct fft_collection* coll){
-  pthread_mutex_lock(&(coll->lock));
   if(gsl_fft_complex_radix2_forward(coll->data,1,log2_ceil(coll->N)) != GSL_SUCCESS)
     err_sys("gsl_fft_complex_radix2_forward error");
-  coll->flag = ~(coll->flag); // FFT will both change domain and shift data
-  pthread_mutex_unlock(&(coll->lock));
 }
 
 void ifft(struct fft_collection* coll){
-  pthread_mutex_lock(&(coll->lock));
   if(gsl_fft_complex_radix2_inverse(coll->data,1,log2_ceil(coll->N)) != GSL_SUCCESS)
     err_sys("gsl_fft_complex_radix2_inverse error");
-  coll->flag = ~(coll->flag); // FFT will both change domain and shift data
-  pthread_mutex_unlock(&(coll->lock));
 }
 
 /* Applies a gaussian filter to data in coll.
@@ -53,7 +45,6 @@ void gaussian_filter(struct fft_collection* coll, double fc, double bandwidth){
   int i;
   double ib2 = 1.0/(bandwidth*bandwidth), scale;
 
-  pthread_mutex_lock(&(coll->lock));
   scale = exp(-0.5*ib2*(0 - fc)*(0 - fc));
   REAL(coll->data,0) *= scale;
   IMAG(coll->data,0) *= scale;
@@ -67,7 +58,6 @@ void gaussian_filter(struct fft_collection* coll, double fc, double bandwidth){
   scale = exp(-0.5*ib2*(i - fc)*(i - fc));
   REAL(coll->data,coll->N/2) *= scale;
   IMAG(coll->data,coll->N/2) *= scale;
-  pthread_mutex_unlock(&(coll->lock));
 }
 
 int count_samples(char *filename){
@@ -124,7 +114,7 @@ void decode(struct fft_collection* coll, char *the_string){
 
 int main(int argc, char *argv[]){
   FILE *f;
-  struct fft_collection coll = {NULL, 0x00, 0, PTHREAD_MUTEX_INITIALIZER}; 
+  struct fft_collection coll = {NULL, 0}; 
   int i;
   double fc = 1024.0, bandwidth = 256.0;
   char* the_string;
@@ -160,9 +150,9 @@ int main(int argc, char *argv[]){
   if((the_string = calloc(log2_ceil(coll.N)/8+1,sizeof(char))) == NULL)
     err_sys("calloc error");
   decode(&coll, the_string);
+
   printf("%s\n", the_string);
   free(the_string);
-
   free(coll.data);
   return 0;
 }
