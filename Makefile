@@ -7,22 +7,27 @@ CC = gcc
 # if debug info counts
 CFLAGS = -g -Wall -ansi -pedantic -std=c99 -march=native
 LOADLIBES = -lgsl -lgslcblas -lm
-
-
-
 LC = pdflatex
-FLAGS = -shell-escape
+LATEX_FLAGS = -shell-escape
+GNUPLOT_TO_TEX = gnuplot -e $(subst filename,$@,"set terminal epslatex color solid; set output 'filename'")
+
+# When new plot DO:
+# 1: Add to PLOTS list
+# 2: Create dependencies list and compilation rule
 PLOTS = filtered_with_bandwidth_256 different_filters different_bandwidths
-PLOTINCLUDES = $(PLOTS:=.tex)
-GNUPLOTSCRIPTS = $(PLOTS:=.gp)
-EPSS = $(PLOTS:=.eps)
 
-rap: rap.tex $(PLOTINCLUDES)
-	$(LC) $(FLAGS) rap.tex
+rap: rap.tex $(PLOTS:=.tex)
+	$(LC) $(LATEX_FLAGS) rap.tex
 
-# Always make eps and tex when gnuplotting through Make
-%.tex: %.gp
-	gnuplot -e $(subst filename,$@,"set terminal epslatex color solid; set output 'filename'") $<
+# Plots dependencies and compilation rules
+filtered_with_bandwidth_256.tex: filtered_with_bandwidth_256.gp amplot.data filtered_256.data
+	$(GNUPLOT_TO_TEX) $< # $< means "the first dependency". Here: filtered_with_bandwidth_256.dp
+
+different_filters.tex: different_filters.gp fft_before_filtering.data filtered_fft_domain_64.data Scale_fct_64.data filtered_fft_domain_128.data Scale_fct_128.data filtered_fft_domain_256.data Scale_fct_256.data
+	$(GNUPLOT_TO_TEX) $<
+
+different_bandwidths.tex: different_bandwidths.gp filtered_64.data filtered_128.data filtered_256.data filtered_512.data
+	$(GNUPLOT_TO_TEX) $<
 
 # _POSIX_C_SOURCE >= 2 needed to get popen from stdio.h
 lab1: lab1.c
@@ -44,8 +49,8 @@ show:
 
 # remove temp files
 clean:
-	rm -vf $(EPSS) $(PLOTINCLUDES) *.aux *.toc *.log $(PLOTS:=-eps-converted-to.pdf)
+	rm -vf $(PLOTS:=.eps) $(PLOTS:=.tex) $(PLOTS:=-eps-converted-to.pdf) *.aux *.toc *.log 
 
 # also remove all compiled results
 veryclean:
-	rm -vf $(EPSS) $(PLOTINCLUDES) *.aux *.toc *.log $(PLOTS:=-eps-converted-to.pdf) rap.pdf lab1
+	rm -vf $(PLOTS:=.eps) $(PLOTS:=.tex) $(PLOTS:=-eps-converted-to.pdf) *.aux *.toc *.log rap.pdf lab1
