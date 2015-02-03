@@ -90,8 +90,8 @@ with a filter.
 
 \subsection{Discrete Fourier Transform}
 The Fourier Theorem states that every periodic signal can be decomposed into
-a series of sines and cosines with different frequencies and coefficients (amplitudes).
-Since the distribution of these coefficients (the frequency distribution)
+a series of sines and cosines with different frequencies and corresponding coefficients (Fourier coefficients).
+Since the values of these coefficients% (the frequency distribution)
 is dramatically different in our pure signal and in the noise,
 we would like to do decompose our raw signal into such a series so that we can
 investigate and change the coefficients.
@@ -103,17 +103,27 @@ Transform:
   H_n = \sum_{k=0}^{N-1} h_ke^{2\pi ikn/N},
 \end{equation}
 where $h_k$ is our discrete signal in time, $N$ is the number of samples we have and
-$H_n$ is the amplitude of the $n'th$ frequency in the signal.
+$H_n$ is the amplitude of the $n$'th frequency in the signal.
 
-The problem of removing the noise can now be expressed as
-``finding the $f_c$ and the side bands and making their coefficients
-dominate all the others''. This operation is called filtering, and is
-described in section \ref{sec:gauss}.
+The problem of removing the noise can now be expressed as:
+\begin{itemize}
+  \item Extract the Fourier coefficients of the signal
+  \item Find the coefficient that corresponds to $f_c$ and the side bands
+  \item Make them dominate all other coefficients
+  \item Reconstruct the (approximately pure) signal
+\end{itemize}
 
-When filtering is done,
-we still need to reconstruct the time-dependent pure signal, $p_k$,
+Finding the carrying frequency (or equivalently its coefficient) will be
+an optimization problem. We simply assume that the largest coefficient
+correspond to $f_c$. If not, our Fourier Trasform-based method won't work.
+
+Making the coefficient of $f_c$ dominate all others is a filtering problem.
+We simply multiply the found series of coefficients, $H$, with a function
+$G(f)$ that has a maxima in $f_c$.
+
+Reconstructing the time-dependent pure signal, $p_k$,
 from our new set of
-coefficients, $P_n$, in order to see the wave packets.
+coefficients, $P_n$, is needed in order to see the wave packets.
 This reconstruction is called
 an Inverse Fourier Transform, and its discrete version can be defined like:
 \begin{equation}\label{eq:ift}

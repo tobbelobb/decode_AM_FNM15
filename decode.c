@@ -3,7 +3,6 @@
 #include <math.h>
 #include <gsl/gsl_errno.h> 
 #include <gsl/gsl_fft_complex.h>
-#include <pthread.h>
 
 #define REAL(z,i) ((z)[2*(i)])
 #define IMAG(z,i) ((z)[2*(i)+1])
@@ -23,8 +22,8 @@ void err_sys(const char* x) {
  * Works for 1 < a < 1 073 741 825 only.
  * bsr instruction reason for making this */
 int log2_ceil(int a){
-  register int val __asm__("edi");
-  __asm__("decl %edi;bsr %edi,%edi;incl %edi;");
+  register int val __asm__ ("edi");
+  __asm__ volatile ("decl %edi;bsr %edi,%edi;incl %edi;");
   return 1 << val;
 }
 
