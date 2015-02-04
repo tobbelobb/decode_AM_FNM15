@@ -393,7 +393,8 @@ int main(int argc, char *argv[]){
 
   // Manipulate data
   fft(&coll);
-  gaussian_filter(&coll, bandwidth, 2);
+  //scale_coll(&coll,1.0/2048.0);
+  //gaussian_filter(&coll, bandwidth, 2);
   //ifft(&coll);
 
   // What to do with manipulated data
@@ -410,8 +411,7 @@ int main(int argc, char *argv[]){
     decode(&coll, the_string);
     printf("%s\n", the_string);
     free(the_string);
-  }
-  else
+  }else
     printf("Don't support option %s\n",argv[3]);
 
   fclose(f);
